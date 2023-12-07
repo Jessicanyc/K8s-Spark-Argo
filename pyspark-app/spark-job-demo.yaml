@@ -1,0 +1,47 @@
+apiVersion: "sparkoperator.k8s.io/v1beta2"
+kind: SparkApplication
+metadata:
+  name: pyspark-py
+  namespace: spark
+  annotations:
+    prometheus.io/scrape: "true"
+    prometheus.io/port: "8090"
+    prometheus.io/path: "/metrics"
+    sparkapplication.sparkoperator.k8s.io/deleteSparkResourcesOnCompletion: "true"
+spec:
+  type: Python
+  pythonVersion: "3"
+  mode: cluster
+  image: "jessicahuangnyc/demo-spark-job:abfcc7228380f3c79118a59044e185a815c2caf4"
+  imagePullPolicy: Always
+  mainApplicationFile: "local:///opt/spark/examples/src/main/python/corr_script_small.py"
+  sparkVersion: "3.1.1"
+  restartPolicy:
+    type: OnFailure
+    onFailureRetries: 2
+    onFailureRetryInterval: 10
+    onSubmissionFailureRetries: 5
+    onSubmissionFailureRetryInterval: 20
+  sparkConf:
+    "spark.driver.extraJavaOptions": "-javaagent:/prometheus/jmx_prometheus_javaagent-0.11.0.jar=8090:/prometheus/prometheus.yaml"
+    "spark.executor.extraJavaOptions": "-javaagent:/prometheus/jmx_prometheus_javaagent-0.11.0.jar=8090:/prometheus/prometheus.yaml"
+    "spark.metrics.conf": "/prometheus/metrics.properties"
+  driver:
+    cores: 1
+    coreLimit: "1200m"
+    memory: "1024m"
+    labels:
+      version: 3.1.1
+    serviceAccount: spark
+  executor:
+    cores: 1
+    instances: 1
+    memory: "1024m"
+    labels:
+      version: 3.1.1
+  monitoring:
+    exposeDriverMetrics: true
+    exposeExecutorMetrics: true
+    prometheus:
+      jmxExporterJar: "/prometheus/jmx_prometheus_javaagent-0.11.0.jar"
+      port: 8090
